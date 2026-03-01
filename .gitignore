@@ -20,6 +20,8 @@ groups/english/*
 !groups/main/CLAUDE.md
 !groups/global/CLAUDE.md
 !groups/english/CLAUDE.md
+!groups/english/vocab.md
+!groups/english/style-profile.md
 
 # Secrets
 *.keys.json
