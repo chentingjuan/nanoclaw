@@ -22,3 +22,30 @@
 
 • *compound* — to grow or accumulate over time (in business: value builds on itself)
   _Context:_ "That is where enterprise value will compound"
+
+• *append-only* — a system where data can only be added, never changed or deleted
+  _Context:_ "Ink is an append-only knowledge graph system"
+
+• *immutable* — cannot be changed once created
+  _Context:_ "Raw inputs are immutable (cannot be changed after ingestion)"
+
+• *ingestion* — the process of taking in and storing data into a system
+  _Context:_ "cannot be changed after ingestion"
+
+• *artifact* — a document, file, or piece of data created by someone or something
+  _Context:_ "unstructured source artifacts"
+
+• *schema* — a structured definition of how data should be organized
+  _Context:_ "No domain-specific schema is applied here"
+
+• *primitives* — basic, fundamental building blocks in a system
+  _Context:_ "normalizes raw inputs into structured primitives"
+
+• *invariants* — rules or properties that must always be true in a system
+  _Context:_ "The following invariants always hold"
+
+• *materialized projection* — a saved view of data based on a query (technical database term)
+  _Context:_ "Views are materialized projections of domain-scoped queries"
+
+• *auditability* — the ability to track and review what happened in a system
+  _Context:_ "This ensures auditability and reproducibility"
