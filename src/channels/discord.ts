@@ -1,6 +1,16 @@
-import { Client, Events, GatewayIntentBits, Message, TextChannel } from 'discord.js';
+import {
+  Client,
+  Events,
+  GatewayIntentBits,
+  Message,
+  TextChannel,
+  Attachment,
+} from 'discord.js';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
 
 import { ASSISTANT_NAME, TRIGGER_PATTERN } from '../config.js';
+import { resolveGroupIpcPath } from '../group-folder.js';
 import { logger } from '../logger.js';
 import {
   Channel,
@@ -8,6 +18,85 @@ import {
   OnInboundMessage,
   RegisteredGroup,
 } from '../types.js';
+
+const TEXT_EXTENSIONS = new Set([
+  '.txt',
+  '.md',
+  '.json',
+  '.js',
+  '.ts',
+  '.py',
+  '.java',
+  '.cpp',
+  '.c',
+  '.go',
+  '.rs',
+  '.html',
+  '.css',
+  '.xml',
+  '.yaml',
+  '.yml',
+  '.toml',
+  '.sh',
+  '.sql',
+  '.csv',
+  '.log',
+]);
+
+const MAX_INLINE_LENGTH = 5000;
+
+function isTextFile(att: Attachment): boolean {
+  const contentType = att.contentType || '';
+  if (contentType.startsWith('text/') || contentType === 'application/json')
+    return true;
+  const name = att.name || '';
+  const ext = name.slice(name.lastIndexOf('.')).toLowerCase();
+  return TEXT_EXTENSIONS.has(ext);
+}
+
+async function processAttachment(
+  att: Attachment,
+  inputDir: string,
+): Promise<string> {
+  const contentType = att.contentType || '';
+  const fileName = att.name || `attachment-${att.id}`;
+
+  const response = await fetch(att.url);
+  if (!response.ok) {
+    logger.warn(
+      { url: att.url, status: response.status },
+      'Failed to download attachment',
+    );
+    return `[Failed to download: ${fileName}]`;
+  }
+
+  if (isTextFile(att)) {
+    const text = await response.text();
+    const truncated =
+      text.length > MAX_INLINE_LENGTH
+        ? text.slice(0, MAX_INLINE_LENGTH) + '\n[...truncated]'
+        : text;
+    logger.info({ fileName, size: text.length }, 'Inlined text attachment');
+    return `[File: ${fileName}]\n\`\`\`\n${truncated}\n\`\`\``;
+  }
+
+  if (contentType.startsWith('video/'))
+    return `[Video: ${fileName} — not supported]`;
+  if (contentType.startsWith('audio/'))
+    return `[Audio: ${fileName} — not supported]`;
+
+  // Images and other binary files: save to IPC input dir
+  const filePath = join(inputDir, fileName);
+  const buffer = Buffer.from(await response.arrayBuffer());
+  await writeFile(filePath, buffer);
+  const containerPath = `/workspace/ipc/input/${fileName}`;
+  const label = contentType.startsWith('image/') ? 'Image' : 'File';
+  logger.info(
+    { fileName, filePath },
+    `Downloaded ${label.toLowerCase()} attachment`,
+  );
+  return `[${label}: ${fileName}]\nPath: ${containerPath}`;
+}
 
 export interface DiscordChannelOpts {
   onMessage: OnInboundMessage;
@@ -84,27 +173,6 @@ export class DiscordChannel implements Channel {
         }
       }
 
-      // Handle attachments — store placeholders so the agent knows something was sent
-      if (message.attachments.size > 0) {
-        const attachmentDescriptions = [...message.attachments.values()].map((att) => {
-          const contentType = att.contentType || '';
-          if (contentType.startsWith('image/')) {
-            return `[Image: ${att.name || 'image'}]`;
-          } else if (contentType.startsWith('video/')) {
-            return `[Video: ${att.name || 'video'}]`;
-          } else if (contentType.startsWith('audio/')) {
-            return `[Audio: ${att.name || 'audio'}]`;
-          } else {
-            return `[File: ${att.name || 'file'}]`;
-          }
-        });
-        if (content) {
-          content = `${content}\n${attachmentDescriptions.join('\n')}`;
-        } else {
-          content = attachmentDescriptions.join('\n');
-        }
-      }
-
       // Handle reply context — include who the user is replying to
       if (message.reference?.messageId) {
         try {
@@ -132,6 +200,31 @@ export class DiscordChannel implements Channel {
           'Message from unregistered Discord channel',
         );
         return;
+      }
+
+      // Handle attachments — download and make available to Claude
+      if (message.attachments.size > 0) {
+        const inputDir = join(resolveGroupIpcPath(group.folder), 'input');
+        await mkdir(inputDir, { recursive: true });
+
+        const descriptions = await Promise.all(
+          [...message.attachments.values()].map(async (att) => {
+            try {
+              return await processAttachment(att, inputDir);
+            } catch (err) {
+              logger.error(
+                { att: att.name, err },
+                'Error processing attachment',
+              );
+              return `[Error processing: ${att.name || att.id}]`;
+            }
+          }),
+        );
+
+        const attachmentBlock = descriptions.join('\n\n');
+        content = content
+          ? `${content}\n\n${attachmentBlock}`
+          : attachmentBlock;
       }
 
       // Deliver message — startMessageLoop() will pick it up
