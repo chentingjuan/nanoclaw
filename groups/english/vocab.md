@@ -49,3 +49,29 @@
 
 • *auditability* — the ability to track and review what happened in a system
   _Context:_ "This ensures auditability and reproducibility"
+
+## 2026-03-02
+
+• *obsolete* — no longer used or needed because something better exists
+  _Context:_ "the classic discovery → mockup → iterate design workflow is becoming obsolete"
+
+• *upfront* — happening or done at the beginning, before the main work starts
+  _Context:_ "rather than lengthy upfront discovery phases"
+
+• *feedback loop* — a process where results are used to improve the next iteration
+  _Context:_ "designers are working in tighter feedback loops with engineers"
+
+• *fluency* — the ability to use something smoothly and confidently
+  _Context:_ "technical fluency — understanding what AI can and cannot do"
+
+• *irreplaceable* — so valuable it cannot be substituted with something else
+  _Context:_ "areas where human expertise remains irreplaceable"
+
+• *durability* — the ability to last a long time without breaking down or becoming outdated
+  _Context:_ "Chatbot interfaces have durability despite predictions they'd be temporary"
+
+• *legibility* — how easy something is to read, understand, or interpret
+  _Context:_ "designers must focus on 'legibility' and user mental models"
+
+• *artifact* — a product or object created as part of a process (in design: mockups, prototypes, documents)
+  _Context:_ "the role is shifting from artifact creation toward experience architecture"
